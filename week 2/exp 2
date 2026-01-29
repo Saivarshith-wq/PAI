@@ -1,0 +1,24 @@
+import heapq
+
+def solve(A, B, T):
+    h = lambda x, y: min(abs(x-T), abs(y-T))
+    pq, seen = [(h(0,0), 0, 0, 0, [])], set()
+
+    while pq:
+        f, g, a, b, path = heapq.heappop(pq)
+        if (a, b) in seen: continue
+        seen.add((a, b))
+        path += [(a, b)]
+        if a == T or b == T: return path
+
+        for x, y in {
+            (A, b), (a, B), (0, b), (a, 0),
+            (a-min(a,B-b), b+min(a,B-b)),
+            (a+min(b,A-a), b-min(b,A-a))
+        }:
+            heapq.heappush(pq, (g+1+h(x,y), g+1, x, y, path))
+    return None
+
+
+for s in solve(4, 3, 2):
+    print(s)
