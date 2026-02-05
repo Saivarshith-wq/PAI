@@ -1,0 +1,47 @@
+from collections import deque
+
+def get_next_states(a, b, m, n):
+    return [
+        (m, b),
+        (a, n),
+        (0, b),
+        (a, 0),
+        (a - min(a, n - b), b + min(a, n - b)),
+        (a + min(b, m - a), b - min(b, m - a))
+    ]
+
+def bfs(m, n, d):
+    queue = deque([((0, 0), [(0, 0)])])
+    visited = set([(0, 0)])
+
+    while queue:
+        (a, b), path = queue.popleft()
+        if a == d or b == d:
+            return path
+
+        for state in get_next_states(a, b, m, n):
+            if state not in visited:
+                visited.add(state)
+                queue.append((state, path + [state]))
+    return None
+
+def dfs(m, n, d):
+    stack = [((0, 0), [(0, 0)])]
+    visited = set([(0, 0)])
+
+    while stack:
+        (a, b), path = stack.pop()
+        if a == d or b == d:
+            return path
+
+        for state in reversed(get_next_states(a, b, m, n)):
+            if state not in visited:
+                visited.add(state)
+                stack.append((state, path + [state]))
+    return None
+
+if __name__ == "__main__":
+    m, n, d = 4, 3, 2
+
+    print("BFS Path:", bfs(m, n, d))
+    print("DFS Path:", dfs(m, n, d))
