@@ -1,0 +1,111 @@
+#MAIN CODE
+from flask import Flask, render_template, request
+from sklearn.naive_bayes import GaussianNB
+import numpy as np
+
+app = Flask(__name__)
+
+# ── Dataset ──────────────────────────────────────────────────────────────────
+# Features: [Fever, Cough, Sneezing]  (1 = Yes, 0 = No)
+# Labels:    0 = Flu | 1 = Cold | 2 = Allergy
+
+X_train = np.array([
+    # Flu  — fever is the dominant signal
+    [1, 1, 0],
+    [1, 1, 0],
+    [1, 0, 0],
+    [1, 1, 1],
+    [1, 0, 1],
+    [1, 1, 0],
+    [1, 0, 0],
+    # Cold — cough + sneezing, no/mild fever
+    [0, 1, 1],
+    [0, 1, 1],
+    [0, 1, 1],
+    [0, 1, 0],
+    [0, 1, 0],
+    [1, 1, 1],
+    [0, 1, 1],
+    # Allergy — sneezing only, no cough, no fever
+    [0, 0, 1],
+    [0, 0, 1],
+    [0, 0, 1],
+    [0, 0, 0],
+    [0, 0, 1],
+    [0, 0, 1],
+    [0, 0, 1],
+])
+
+y_train = np.array([
+    0, 0, 0, 0, 0, 0, 0,   # Flu
+    1, 1, 1, 1, 1, 1, 1,   # Cold
+    2, 2, 2, 2, 2, 2, 2,   # Allergy
+])
+
+LABELS = {0: "Flu", 1: "Cold", 2: "Allergy"}
+
+REMEDIES = {
+    "Flu": [
+        "🫖 Drink warm fluids throughout the day",
+        "😴 Rest as much as possible",
+        "🫚 Sip ginger tea 2–3 times a day",
+        "💊 Take paracetamol if fever is high",
+        "🌡️ Monitor your temperature regularly",
+    ],
+    "Cold": [
+        "💨 Steam inhalation 2–3 times daily",
+        "🍯 Take a spoonful of honey with warm water",
+        "💧 Stay well-hydrated — aim for 8+ glasses",
+        "🧂 Gargle warm salt water for throat relief",
+        "🧣 Keep yourself warm and avoid cold air",
+    ],
+    "Allergy": [
+        "🌿 Identify and avoid your allergen triggers",
+        "🚿 Rinse nasal passages with saline solution",
+        "🍵 Drink chamomile or peppermint herbal tea",
+        "😷 Wear a mask when outdoors during high pollen",
+        "🪟 Keep windows closed during allergy season",
+    ],
+}
+
+# ── Train model ───────────────────────────────────────────────────────────────
+model = GaussianNB()
+model.fit(X_train, y_train)
+
+
+def predict(fever: int, cough: int, sneezing: int):
+    """Return (disease_name, confidence_pct, remedies_list)."""
+    features = np.array([[fever, cough, sneezing]])
+    label_idx = model.predict(features)[0]
+    proba = model.predict_proba(features)[0]
+    disease = LABELS[label_idx]
+    confidence = round(proba[label_idx] * 100, 1)
+    return disease, confidence, REMEDIES[disease]
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+@app.route("/", methods=["GET", "POST"])
+def index():
+    result = None
+    if request.method == "POST":
+        fever    = int(request.form.get("fever",    0))
+        cough    = int(request.form.get("cough",    0))
+        sneezing = int(request.form.get("sneezing", 0))
+        disease, confidence, remedies = predict(fever, cough, sneezing)
+        result = {
+            "disease":    disease,
+            "confidence": confidence,
+            "remedies":   remedies,
+            "symptoms": {
+                "Fever":    "Yes" if fever    else "No",
+                "Cough":    "Yes" if cough    else "No",
+                "Sneezing": "Yes" if sneezing else "No",
+            },
+        }
+    return render_template("index.html", result=result)
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+#the above saved as app.py
